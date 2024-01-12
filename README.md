@@ -18,6 +18,11 @@ Requirement to use these roles:
 - Ansible 2.15.3
 - boto
 - AWS admin access
+  
+```
+pip3 install boto3
+ansible-galaxy collection install amazon.aws
+```
 
 Specifically, these are the versions of mentioned software that I am using:
 
@@ -33,6 +38,15 @@ ansible [core 2.15.3]
   jinja version = 3.1.2
   libyaml = True
 arbab@ansible2:~$
+```
+
+
+
+```
+export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+export AWS_DEFAULT_REGION=us-east-2
+ansible-playbook aws.yml
 ```
 
 Ansible uses python-boto library to call AWS API, and boto needs AWS credentials in order to perform all the functions. There are many ways to configure your AWS credentials. The easiest way is to crate a .boto file under your user home directory:

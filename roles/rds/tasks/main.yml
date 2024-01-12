@@ -1,6 +1,6 @@
 ---
 - name: Create RDS Subnet Group
-  rds_subnet_group:
+  amazon.aws.rds_subnet_group:
     region: "{{ vpc_region }}"
     state: present
     name: "{{ rds_subnet_group_name }}"
@@ -8,7 +8,7 @@
     subnets: "{{ rds_sg_subnets }}"
 
 - name: Provisioning RDS Instance
-  rds:
+  amazon.aws.rds_instance:
     command: create
     region: "{{ vpc_region }}"
     multi_zone: "{{ rds_multi_zone_option }}"
@@ -30,7 +30,7 @@
   register: rds
 
 - name: "Write RDS endpoint to {{ vpc_name }}.yml file inside the secret_vars directory"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "secret_vars/{{ vpc_name }}.yml"
     regexp: "^RDS_ENDPOINT"
     line: "RDS_ENDPOINT: {{ '\"' + rds.instance.endpoint + '\"' }}"
