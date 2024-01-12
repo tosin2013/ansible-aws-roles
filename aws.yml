@@ -3,9 +3,9 @@
   connection: local
   gather_facts: no   
   roles:
-    - vpc
-    - ec2sg
-    - ec2key
-    - ec2instance
-    - elb
-    - rds
+    - { role: vpc, tags: create-vpc }
+    - { role: ec2sg, tags: create-ec2sg }
+    - { role: ec2key, tags: create-ec2key }
+    - { role: ec2instance, tags: create-ec2instance }
+    - { role: elb, tags: create-elb }
+    - { role: rds, tags: create-rds }
