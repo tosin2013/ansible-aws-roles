@@ -1,16 +1,20 @@
 - name: Create a VPC
   amazon.aws.ec2_vpc_net:
-    name: "{{ vpc_name}}"
+    name: "{{ vpc_name }}"
     cidr_block: "{{ vpc_cidr_block }}"
     region: "{{ vpc_region }}"
     tags:
-      Name: "{{vpc_region }}"
+      Name: "{{ vpc_name }}"
     state: present
   register: vpc
+  tags:
+    - create-vpc
 
 - name: Set VPC id fact for later use
   set_fact:
     vpc_id: "{{ vpc.vpc.id }}"
+  tags:
+    - create-vpc
 
 - name: Create an internet gateway and attach it to the VPC
   amazon.aws.ec2_vpc_igw:
@@ -18,10 +22,14 @@
     region: "{{ vpc_region }}"
     state: present
   register: igw
+  tags:
+    - create-vpc
 
 - name: Set IGW id fact for later use
   set_fact:
     igw_id: "{{ igw.gateway_id }}"
+  tags:
+    - create-vpc
 
 - name: Tag the Internet Gateway
   amazon.aws.ec2_tag:
@@ -30,6 +38,45 @@
     state: present
     tags:
       Name: "{{ vpc_name }}-igw"
+  tags:
+    - create-vpc
+
+- name: Create public subnets
+  amazon.aws.ec2_vpc_subnet:
+    vpc_id: "{{ vpc_id }}"
+    cidr: "{{ item.cidr }}"
+    az: "{{ item.az }}"
+    region: "{{ vpc_region }}"
+    tags: "{{ item.resource_tags }}"
+    state: present
+    map_public: true
+  with_items: "{{ public_vpc_subnets }}"
+  when: item in public_vpc_subnets
+  tags:
+    - create-vpc
+
+- name: Gather facts about public subnets in the VPC
+  amazon.aws.ec2_vpc_subnet_info:
+    region: "{{ vpc_region }}"
+    filters:
+      vpc-id: "{{ vpc_id }}"
+      map-public-ip-on-launch: true
+  register: public_subnet_facts
+  tags:
+    - create-vpc
+
+- name: debug public  subnet_facts
+  debug:
+    msg: "{{ public_subnet_facts }}"
+  tags: 
+    - create-vpc
+
+- name: Set public_subnet_ids fact for later use
+  set_fact:
+    public_subnet_ids: "{{ public_subnet_facts.subnets | selectattr('map_public_ip_on_launch', 'equalto', true) | map(attribute='id') | list }}"
+  failed_when: public_subnet_ids | length == 0
+  tags:
+    - create-vpc
 
 - name: Create a route table
   amazon.aws.ec2_vpc_route_table:
@@ -38,59 +85,79 @@
     tags:
       Name: "{{ vpc_name }}-public-route-table"
     state: present
-  register: route_table
-
-- name: Create a route for internet access
-  amazon.aws.ec2_vpc_route_table:
-    route_table_id: "{{ route_table.route_table.id }}"
-    vpc_id: "{{ vpc_id }}"
-    region: "{{ vpc_region }}"
-    state: present
+    subnets:
+      - "{{ public_subnet_ids[0] }}"
+      - "{{ public_subnet_ids[1] }}"
     routes:
       - dest: 0.0.0.0/0
         gateway_id: "{{ igw_id }}"
   register: public_rt
+  tags:
+    - create-vpc
 
-- name: Gather facts about all subnets in the VPC
+- name: Set Public Route Table ID fact for later use
+  set_fact:
+    public_rt_id: "{{ public_rt.route_table.id }}"
+  tags:
+    - create-vpc
+
+- name: Create private subnets
+  amazon.aws.ec2_vpc_subnet:
+    vpc_id: "{{ vpc_id }}"
+    cidr: "{{ item.cidr }}"
+    az: "{{ item.az }}"
+    region: "{{ vpc_region }}"
+    tags: "{{ item.resource_tags }}"
+    state: present
+  with_items: "{{ private_vpc_subnets }}"
+  when: item in private_vpc_subnets
+  tags:
+    - create-vpc
+
+
+- name: Gather facts about private subnets in the VPC
   amazon.aws.ec2_vpc_subnet_info:
     region: "{{ vpc_region }}"
     filters:
       vpc-id: "{{ vpc_id }}"
-  register: subnet_facts
+      map-public-ip-on-launch: false
+  register: private_subnet_facts
+  tags:
+    - create-vpc
 
-- name: Set public_subnet_ids fact for later use
+- name: Set private_subnet_ids fact for later use
   set_fact:
-    public_subnet_ids: "{{ subnet_facts.subnets | selectattr('map_public', 'equalto', true) | map(attribute='id') | list }}"
+    private_subnet_ids: "{{ private_subnet_facts.subnets | selectattr('map_public_ip_on_launch', 'equalto', false) | map(attribute='id') | list }}"
+  tags:
+    - create-vpc
 
-- name: Associate the route table with the public subnets
-  amazon.aws.ec2_vpc_subnet:
-    vpc_id: "{{ vpc_id }}"
-    id: "{{ item }}"
-    route_table_id: "{{ route_table.route_table.id }}"
-    map_public: yes
-    region: "{{ vpc_region }}"
-    state: present
-  with_items: "{{ public_subnet_ids }}"
-- name: Set Public Route Table ID fact for later use
-  set_fact:
-    public_rt_id: "{{ public_rt.route_table.id }}"
+- name: debug private subnet_facts
+  debug:
+    msg: "{{ private_subnet_ids }}"
+  tags: 
+    - create-vpc
 
-- name: create private route table
+- name: Create private route table
   amazon.aws.ec2_vpc_route_table:
     vpc_id: "{{ vpc_id }}"
     region: "{{ vpc_region }}"
     tags:
       Name: "{{ vpc_name }}-private-route-table"
-    state: present
+    subnets:
+      - "{{ private_subnet_ids[0] }}"
+      - "{{ private_subnet_ids[1] }}"
   register: private_rt
+  tags:
+    - create-vpc
 
-- name: "Create {{ vpc_name }}.yml file inside the secret_vars directory"
-  ansible.builtin.lineinfile:
+- name: Copy secret_vars/secret.yml to {{ vpc_name }}.yml file inside the secret_vars directory
+  ansible.builtin.copy:
+    src: secret_vars/secret.yml
     dest: "secret_vars/{{ vpc_name }}.yml"
-    line: "---"
-    create: yes
+  tags:
+    - create-vpc
 
-- name: "Write vpc info to {{ vpc_name }}.yml file inside the secret_vars directory"
+- name: Write vpc info to {{ vpc_name }}.yml file inside the secret_vars directory
   ansible.builtin.lineinfile:
     dest: "secret_vars/{{ vpc_name }}.yml"
     regexp: "^{{ item.regexp | upper }}"
@@ -99,12 +166,46 @@
     - { regexp: 'vpc_id', line: '{{ vpc_id }}' }
     - { regexp: 'igw', line: '{{ igw_id }}' }
     - { regexp: 'route_table_id', line: '{{ public_rt.route_table.id }}' }
+  tags:
+    - create-vpc
 
-- name: "Write public and private subnets ids to {{ vpc_name }}.yml file inside the secret_vars directory"
+- name: Write public subnets ids to {{ vpc_name }}.yml file inside the secret_vars directory
   ansible.builtin.lineinfile:
     dest: "secret_vars/{{ vpc_name }}.yml"
-    regexp: "^{{ item.resource_tags.Alias | upper }}"
-    line: "{{ item.resource_tags.Alias | upper }}: {{ '\"' + item.id + '\"' }}"
-  with_items: "{{ subnet_facts.subnets }}"
-  
+    regexp: "^# EC2_PUBLIC_SUBNET_ID:"
+    line: |
+      EC2_PUBLIC_SUBNET_ID:
+        - {{ public_subnet_ids[0] }}
+        - {{ public_subnet_ids[1] }}
+  when:
+    - public_subnet_ids | length > 0
+  tags:
+    - create-vpc
+
+- name: Write private subnets ids to {{ vpc_name }}.yml file inside the secret_vars directory
+  ansible.builtin.lineinfile:
+    dest: "secret_vars/{{ vpc_name }}.yml"
+    regexp: "^# EC2_PRIVATE_SUBNET_ID:"
+    line: |
+      EC2_PRIVATE_SUBNET_ID:
+        - {{ private_subnet_ids[0] }}
+        - {{ private_subnet_ids[1] }}
+  when:
+    - private_subnet_ids | length > 0
+  tags:
+    - create-vpc
+
+- name: Add the AMI_NAME  and AMI_OWNER variables to {{ vpc_name }}.yml file inside the secret_vars directory
+  ansible.builtin.lineinfile:
+    dest: "secret_vars/{{ vpc_name }}.yml"
+    regexp: "^{{ item.regexp | upper }}"
+    line: "{{ item.regexp | upper }}: {{ '\"' + item.line + '\"' }}"
+  with_items:
+    - { regexp: 'ami_name', line: '{{ ami_name }}' }
+    - { regexp: 'ami_owner', line: '{{ ami_owner }}' }
+  tags:
+    - create-vpc
+
 - include_vars: "secret_vars/{{ vpc_name }}.yml"
+  tags:
+    - create-vpc

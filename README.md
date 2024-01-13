@@ -57,3 +57,5 @@ curl -OL https://raw.githubusercontent.com/tosin2013/openshift-4-deployment-note
 chmod +x configure-aws-cli.sh 
 ./configure-aws-cli.sh -h
 ```
+## Todo 
+- [ ] Add support for  Nat Gateway for the private subnets as a flag

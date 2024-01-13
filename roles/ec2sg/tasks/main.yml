@@ -3,7 +3,6 @@
   amazon.aws.ec2_security_group:
     name: "{{ item.name }}"
     description: "{{ item.description }}"
-    region: "{{ vpc_region }}" 
     vpc_id: "{{ VPC_ID }}" # Came from ENV specific secret file
     state: present
     rules: "{{ item.rules }}"
@@ -13,7 +12,6 @@
 - name: Tag the Security Groups with Distinguished Name
   amazon.aws.ec2_tag:
     resource: "{{ item.group_id }}"
-    region: "{{ vpc_region }}"
     state: present
     tags:
       Name: "{{ item.item.name }}"

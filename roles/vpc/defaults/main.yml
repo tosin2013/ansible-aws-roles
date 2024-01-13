@@ -21,13 +21,15 @@ private_az_2: "{{ vpc_region }}b"
 # Please don't change the variables below, until you know what you are doing
 #
 # Subnets Defination for VPC
-vpc_subnets:
+public_vpc_subnets:
   - cidr: "{{ public_cidr_1 }}" # Public Subnet-1
     az: "{{ public_az_1 }}"
     resource_tags: { "Name":"{{ vpc_name }}-{{ public_az_1 }}-public_subnet-1", "Type":"Public", "Alias":"Public_Subnet_1" }
   - cidr: "{{ public_cidr_2 }}" # Public Subnet-2
     az: "{{ public_az_2 }}"
     resource_tags: { "Name":"{{ vpc_name }}-{{ public_az_2 }}-public-subnet-2", "Type":"Public", "Alias":"Public_Subnet_2" }
+
+private_vpc_subnets:
   - cidr: "{{ private_cidr_1 }}" # Private Subnet-1
     az: "{{ private_az_1 }}"
     resource_tags: { "Name":"{{ vpc_name }}-{{ private_az_1 }}-private-subnet-1", "Type":"Private", "Alias":"Private_Subnet_1" }
