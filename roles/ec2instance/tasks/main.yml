@@ -194,7 +194,7 @@
     dest: "./inventory/hosts"
     regexp: "{{ item }}"
     insertafter: "{{ inventory_name }}"
-    line: item
+    line: "{{ item }}"
   with_items: "{{ public_ips }}"
  
 - name: Wait for SSH to come up on EC2 Instance(s)

@@ -59,3 +59,6 @@ chmod +x configure-aws-cli.sh
 ```
 ## Todo 
 - [ ] Add support for  Nat Gateway for the private subnets as a flag
+- [ ] Work On ELB
+- [ ] Work on RDS
+- [ ] Work on Private EC2 instance deployment 
