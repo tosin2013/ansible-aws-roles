@@ -41,24 +41,38 @@ arbab@ansible2:~$
 ```
 
 
-
+### Export ENV variables
 ```
 export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
 export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
 export AWS_DEFAULT_REGION=us-east-2
+```
+
+### Deploy all at once 
+```shell
 ansible-playbook aws.yml
 ```
 
+### Deploy VPC
+```shell    
+ansible-playbook aws.yml --tags create-vpc
+```
+
+### Configure Secrety Group
+```shell
+ansible-playbook aws.yml --tags create-ec2sg
+``` 
+
+### Deploy EC Instances
+```shell
+ansible-playbook aws.yml --tags create-ec2instance
+``` 
+
 Ansible uses python-boto library to call AWS API, and boto needs AWS credentials in order to perform all the functions. There are many ways to configure your AWS credentials. The easiest way is to crate a .boto file under your user home directory:
 
-Then add the following:
-```shell
-curl -OL https://raw.githubusercontent.com/tosin2013/openshift-4-deployment-notes/master/aws/configure-aws-cli.sh
-chmod +x configure-aws-cli.sh 
-./configure-aws-cli.sh -h
-```
 ## Todo 
 - [ ] Add support for  Nat Gateway for the private subnets as a flag
 - [ ] Work On ELB
 - [ ] Work on RDS
 - [ ] Work on Private EC2 instance deployment 
+- [ ] Setup Single instance deployment

@@ -2,6 +2,8 @@
 - name: Searching for the latest AMI image using ami_name and AMI_OWNER
   ansible.builtin.debug:
     msg: "Searching for the latest AMI image using ami_name '{{ ami_name }}' and AMI_OWNER '{{ AMI_OWNER }}'"
+  tags:
+    - create-ec2instance
 
 - name: Search for the latest AMI image
   amazon.aws.ec2_ami_info:
@@ -11,14 +13,20 @@
       owner-id: "{{ AMI_OWNER }}"  # Using a variable for the owner ID
   register: ami_info_result
   failed_when: ami_info_result.images | length == 0
+  tags:
+    - create-ec2instance
 
 - name: Set the AMI ID as a fact
   set_fact:
     ami_id: "{{ ami_info_result.images[0].image_id }}"
+  tags:
+    - create-ec2instance
 
 - name: Print the AMI ID
   debug:
     msg: "The AMI ID is {{ ami_id }}"
+  tags:
+    - create-ec2instance
 
 - name: Query EC2 Instances
   amazon.aws.ec2_instance_info:
@@ -31,44 +39,61 @@
   with_indexed_items: "{{ EC2_PRIVATE_SUBNET_ID }}"
   register: existing_ec2_instances
   tags:
+    - create-ec2instance
     - aws_infra
     - aws_ec2
 
 - name: Debug Content of existing_ec2_instances
   debug:
     var: existing_ec2_instances
+  tags:
+    - create-ec2instance
 
 - name: Check Length of Instances for each Subnet
   debug:
     msg: "The length of instances for subnet {{ item.item.1 }} is {{ item.instances | length }}"
   loop: "{{ existing_ec2_instances.results }}"
+  tags:
+    - create-ec2instance
 
 - name: Show length of existing_ec2_instances.results
   debug:
     msg: "The length of existing_ec2_instances.results is {{ existing_ec2_instances.results | length }}"
+  tags:
+    - create-ec2instance
 
 - name: Show length of existing_ec2_instances.results.instances
   debug:
     msg: "The length of existing_ec2_instances.results[0].instances is {{ existing_ec2_instances.results[0].instances | length }}"
+  tags:
+    - create-ec2instance
 
 - name: Set existing_ec2_instances_list fact as a list
   set_fact:
     existing_ec2_instances_list: "{{ existing_ec2_instances_list | default([]) + [item.instances] }}"
   loop: "{{ existing_ec2_instances.results }}"
+  tags:
+    - create-ec2instance
 
 - name: Debug existing_ec2_instances_list
   debug:
     var: existing_ec2_instances_list
+  tags:
+    - create-ec2instance
 
 - name: debug print out if existing_ec2_instances_list in not empty when deploy_public_ec2_instance is true
   debug:
     msg: "existing_ec2_instances_list is not empty"
   when: existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool
+  tags:
+    - create-ec2instance
 
 - name: debug print out if existing_ec2_instances_list empty when deploy_public_ec2_instance is true
   debug:
     msg: "existing_ec2_instances_list is not empty"
   when: not existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool
+  tags:
+    - create-ec2instance
 
 - name: Create EC2 Public Instance(s)
   amazon.aws.ec2_instance:
@@ -82,13 +107,10 @@
       assign_public_ip: yes
     wait: True
     wait_timeout: 600
-    user_data: |
-              #!/bin/sh
-              sudo apt-get install nginx -y
+    user_data: "{{ user_data_script }}"
     tags:
-      Name: "{{ vpc_name }}-{{ SERVER_ROLE }}-0{{ item.0 + 1 }}"
-      Environment: "{{ ENVIRONMENT }}"
-      Server_Role: "{{ SERVER_ROLE }}"
+      - aws_infra
+      - aws_ec2
     volumes:
       - device_name: /dev/sda1
         ebs:
@@ -99,6 +121,8 @@
   with_indexed_items: "{{ EC2_PUBLIC_SUBNET_ID }}"
   register: existing_ec2_instances
   when:  deploy_public_ec2_instance and (not existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool)
+  tags:
+    - create-ec2instance
 
 - name: Create EC2 Private Instance(s)
   amazon.aws.ec2_instance:
@@ -112,13 +136,10 @@
       assign_public_ip: no
     wait: True
     wait_timeout: 600
-    user_data: |
-              #!/bin/sh
-              sudo apt-get install nginx -y
+    user_data: "{{ user_data_script }}"
     tags:
-      Name: "{{ vpc_name }}-{{ SERVER_ROLE }}-0{{ item.0 + 1 }}"
-      Environment: "{{ ENVIRONMENT }}"
-      Server_Role: "{{ SERVER_ROLE }}"
+      - aws_infra
+      - aws_ec2
     volumes:
       - device_name: /dev/sda1
         ebs:
@@ -129,6 +150,8 @@
   with_indexed_items: "{{ EC2_PRIVATE_SUBNET_ID }}"
   register: ec2
   when: not deploy_public_ec2_instance and (not existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool)
+  tags:
+    - create-ec2instance
 
 - name: Query Deployed EC2 Instances
   amazon.aws.ec2_instance_info:
@@ -142,6 +165,8 @@
   register: wait_for_ec2_instances
   async: 120  # Set the maximum time to wait in seconds (adjust as needed)
   poll: 0  # Start polling immediately
+  tags:
+    - create-ec2instance
 
 - name: Wait for deployed EC2 instances and collect IP addresses
   async_status:
@@ -152,11 +177,15 @@
   delay: 10
   loop: "{{ wait_for_ec2_instances.results }}"
   when: deploy_public_ec2_instance
+  tags:
+    - create-ec2instance
 
 - name: Get Public IP Addresses
   set_fact:
     public_ips: []
   when: deploy_public_ec2_instance
+  tags:
+    - create-ec2instance
 
 - name: Query EC2 Instances
   amazon.aws.ec2_instance_info:
@@ -169,6 +198,7 @@
   with_indexed_items: "{{ EC2_PRIVATE_SUBNET_ID }}"
   register: deployed_ec2_instances
   tags:
+    - create-ec2instance
     - aws_infra
     - aws_ec2
 
@@ -177,17 +207,23 @@
     msg: "{{ item }}"
   loop: "{{ deployed_ec2_instances.results }}"
   when: deploy_public_ec2_instance
+  tags:
+    - create-ec2instance
 
 - name: Extract Public IP Addresses
   set_fact:
      public_ips: "{{ public_ips + [item.instances[0].public_ip_address] }}"
   loop: "{{ deployed_ec2_instances.results }}"
   when: deploy_public_ec2_instance
+  tags:
+    - create-ec2instance
 
 - name: Debug Public IP Addresses
   debug:
     var: public_ips
   when: deploy_public_ec2_instance
+  tags:
+    - create-ec2instance
 
 - name: Add the newly created EC2 instance(s) to the local host group (located at ./inventory/hosts)
   ansible.builtin.lineinfile:
@@ -196,7 +232,9 @@
     insertafter: "{{ inventory_name }}"
     line: "{{ item }}"
   with_items: "{{ public_ips }}"
- 
+  tags:
+    - create-ec2instance
+
 - name: Wait for SSH to come up on EC2 Instance(s)
   ansible.builtin.wait_for:
     host: "{{ item }}"
@@ -204,3 +242,5 @@
     search_regex: OpenSSH
     delay: 10
   with_items: "{{ public_ips }}"
+  tags:
+    - create-ec2instance

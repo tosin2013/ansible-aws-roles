@@ -8,6 +8,8 @@
     rules: "{{ item.rules }}"
   with_items: "{{ ec2_security_groups }}"
   register: aws_sg
+  tags:
+    - create-ec2sg
 
 - name: Tag the Security Groups with Distinguished Name
   amazon.aws.ec2_tag:
@@ -17,3 +19,5 @@
       Name: "{{ item.item.name }}"
       Environment: "{{ Environment }}"
   with_items: "{{ aws_sg.results }}"
+  tags: 
+    - create-ec2sg

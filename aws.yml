@@ -7,5 +7,5 @@
     - { role: ec2sg, tags: create-ec2sg }
     - { role: ec2key, tags: create-ec2key }
     - { role: ec2instance, tags: create-ec2instance }
-    - { role: elb, tags: create-elb }
-    - { role: rds, tags: create-rds }
+    #- { role: elb, tags: create-elb }
+    #- { role: rds, tags: create-rds }
