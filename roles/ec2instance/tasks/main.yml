@@ -34,6 +34,42 @@
     - aws_infra
     - aws_ec2
 
+- name: Debug Content of existing_ec2_instances
+  debug:
+    var: existing_ec2_instances
+
+- name: Check Length of Instances for each Subnet
+  debug:
+    msg: "The length of instances for subnet {{ item.item.1 }} is {{ item.instances | length }}"
+  loop: "{{ existing_ec2_instances.results }}"
+
+- name: Show length of existing_ec2_instances.results
+  debug:
+    msg: "The length of existing_ec2_instances.results is {{ existing_ec2_instances.results | length }}"
+
+- name: Show length of existing_ec2_instances.results.instances
+  debug:
+    msg: "The length of existing_ec2_instances.results[0].instances is {{ existing_ec2_instances.results[0].instances | length }}"
+
+- name: Set existing_ec2_instances_list fact as a list
+  set_fact:
+    existing_ec2_instances_list: "{{ existing_ec2_instances_list | default([]) + [item.instances] }}"
+  loop: "{{ existing_ec2_instances.results }}"
+
+- name: Debug existing_ec2_instances_list
+  debug:
+    var: existing_ec2_instances_list
+
+- name: debug print out if existing_ec2_instances_list in not empty when deploy_public_ec2_instance is true
+  debug:
+    msg: "existing_ec2_instances_list is not empty"
+  when: existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool
+
+- name: debug print out if existing_ec2_instances_list empty when deploy_public_ec2_instance is true
+  debug:
+    msg: "existing_ec2_instances_list is not empty"
+  when: not existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool
+
 - name: Create EC2 Public Instance(s)
   amazon.aws.ec2_instance:
     region: "{{ VPC_REGION }}"
@@ -62,7 +98,7 @@
     count: "{{ ec2_count }}"
   with_indexed_items: "{{ EC2_PUBLIC_SUBNET_ID }}"
   register: existing_ec2_instances
-  when: deploy_provision_ec2_instance | bool and (existing_ec2_instances.instances is not defined or existing_ec2_instances.instances | length == 0)
+  when:  deploy_public_ec2_instance and (not existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool)
 
 - name: Create EC2 Private Instance(s)
   amazon.aws.ec2_instance:
@@ -92,7 +128,7 @@
     count: "{{ ec2_count }}"
   with_indexed_items: "{{ EC2_PRIVATE_SUBNET_ID }}"
   register: ec2
-  when: deploy_provision_ec2_instance | bool and (existing_ec2_instances.instances is not defined or existing_ec2_instances.instances | length == 0)
+  when: not deploy_public_ec2_instance and (not existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool)
 
 - name: Query Deployed EC2 Instances
   amazon.aws.ec2_instance_info:
@@ -102,24 +138,69 @@
       "tag:Environment": "{{ ENVIRONMENT }}"
       "tag:Server_Role": "{{ SERVER_ROLE }}"
       instance-state-name: ["running"]
+  with_indexed_items: "{{ EC2_PUBLIC_SUBNET_ID }}"
+  register: wait_for_ec2_instances
+  async: 120  # Set the maximum time to wait in seconds (adjust as needed)
+  poll: 0  # Start polling immediately
+
+- name: Wait for deployed EC2 instances and collect IP addresses
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: async_result
+  until: async_result.finished
+  retries: 600
+  delay: 10
+  loop: "{{ wait_for_ec2_instances.results }}"
+  when: deploy_public_ec2_instance
+
+- name: Get Public IP Addresses
+  set_fact:
+    public_ips: []
+  when: deploy_public_ec2_instance
+
+- name: Query EC2 Instances
+  amazon.aws.ec2_instance_info:
+    region: "{{ VPC_REGION }}"
+    filters:
+      "tag:Name": "{{ vpc_name }}-{{ SERVER_ROLE }}-0{{ item.0 + 1 }}"
+      "tag:Environment": "{{ ENVIRONMENT }}"
+      "tag:Server_Role": "{{ SERVER_ROLE }}"
+      instance-state-name: ["running", "stopped"]
   with_indexed_items: "{{ EC2_PRIVATE_SUBNET_ID }}"
   register: deployed_ec2_instances
   tags:
     - aws_infra
     - aws_ec2
 
+- name: loop thru item.instances[0]
+  debug:
+    msg: "{{ item }}"
+  loop: "{{ deployed_ec2_instances.results }}"
+  when: deploy_public_ec2_instance
+
+- name: Extract Public IP Addresses
+  set_fact:
+     public_ips: "{{ public_ips + [item.instances[0].public_ip_address] }}"
+  loop: "{{ deployed_ec2_instances.results }}"
+  when: deploy_public_ec2_instance
+
+- name: Debug Public IP Addresses
+  debug:
+    var: public_ips
+  when: deploy_public_ec2_instance
+
 - name: Add the newly created EC2 instance(s) to the local host group (located at ./inventory/hosts)
-  ansible.builtin.lineinfile :
-    dest: "./inventory/hosts" 
-    regexp: "{{ item }}" 
-    insertafter: "[webserver]" 
-    line: "{{ item }}"
-  with_items: "{{ deployed_ec2_instances.results | get_ec2_info('public_ip') }}"
+  ansible.builtin.lineinfile:
+    dest: "./inventory/hosts"
+    regexp: "{{ item }}"
+    insertafter: "{{ inventory_name }}"
+    line: item
+  with_items: "{{ public_ips }}"
  
 - name: Wait for SSH to come up on EC2 Instance(s)
   ansible.builtin.wait_for:
-    host: "{{ item }}" 
-    port: 22 
+    host: "{{ item }}"
+    port: 22
     search_regex: OpenSSH
     delay: 10
-  with_items: "{{ deployed_ec2_instances.results | get_ec2_info('public_ip') }}" 
+  with_items: "{{ public_ips }}"
