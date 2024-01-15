@@ -54,9 +54,9 @@
       tags: [create-ec2key]
       
     when:
-    - local_user_ssh_key
-    - not github_username
-    - not aap_user_ssh_key is defined
+      - local_user_ssh_key
+      - not github_username
+      - not aap_user_ssh_key is defined
 
 - block:
       - name: Create an EC2 key with aap_user_ssh_key
@@ -67,6 +67,6 @@
         tags: [create-ec2key]
 
   when:
-  - aap_user_ssh_key is defined
-  - not local_user_ssh_key
-  - not github_username
+    - aap_user_ssh_key is defined
+    - not local_user_ssh_key
+    - not github_username
