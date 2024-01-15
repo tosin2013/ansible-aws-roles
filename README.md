@@ -58,7 +58,7 @@ ansible-playbook aws.yml
 ansible-playbook aws.yml --tags create-vpc
 ```
 
-### Configure Secrety Group
+### Configure Security Group
 ```shell
 ansible-playbook aws.yml --tags create-ec2sg
 ``` 
