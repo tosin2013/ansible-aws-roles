@@ -9,7 +9,7 @@
 
     - name: Creates a new EC2 key with the mentioned name if not present
       ec2_key:
-        region: "{{ vpc_region }}"
+        region: "{{ VPC_REGION }}"
         name: "{{ ec2_key_name }}"
         key_material:  "{{ github_key_result.content }}"
       tags: [create-ec2key]
@@ -48,7 +48,7 @@
 
     - name: Creates a new EC2 key with the mentioned name if not present
       ec2_key:
-        region: "{{ vpc_region }}"
+        region: "{{ VPC_REGION }}"
         name: "{{ ec2_key_name }}"
         key_material:  "{{ lookup('file',  ssh_key_location ) }}"
       tags: [create-ec2key]
@@ -61,7 +61,7 @@
 - block:
     - name: Create an EC2 key with aap_user_ssh_key
       ec2_key:
-        region: "{{ vpc_region }}"
+        region: "{{ VPC_REGION }}"
         name: "{{ ec2_key_name }}"
         key_material: "{{ aap_user_ssh_key }}"
       tags: [create-ec2key]
