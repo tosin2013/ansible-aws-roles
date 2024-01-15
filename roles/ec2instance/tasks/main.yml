@@ -142,9 +142,6 @@
     wait: True
     wait_timeout: 600
     user_data: "{{ user_data_script }}"
-    tags:
-      - aws_infra
-      - aws_ec2
     volumes:
       - device_name: /dev/sda1
         ebs:
