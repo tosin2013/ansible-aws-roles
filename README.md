@@ -63,6 +63,11 @@ ansible-playbook aws.yml --tags create-vpc
 ansible-playbook aws.yml --tags create-ec2sg
 ``` 
 
+### Configure Key Pair
+```shell
+ansible-playbook aws.yml --tags create-ec2key
+``` 
+
 ### Deploy EC Instances
 ```shell
 ansible-playbook aws.yml --tags create-ec2instance

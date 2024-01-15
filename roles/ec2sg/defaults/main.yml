@@ -1,19 +1,19 @@
 ---
 # Variables that can provide as extra vars
-VPC_NAME: test
-VPC_REGION: us-east-1 # N.Virginia
-ENVIRONMENT: "test"
-EC2_SECURITY_GROUPS:
-  - name: test-sg
-    description: "This sg is just a test sg"
-    rules:
-      - proto: tcp
-        from_port: 22
-        to_port: 22
-        cidr_ip: 0.0.0.0/0
+VPC_NAME: test  # Name of the VPC
+VPC_REGION: us-east-1  # Region of the VPC
+ENVIRONMENT: "test"  # Environment name
+EC2_SECURITY_GROUPS:  # List of EC2 security groups
+  - name: test-sg  # Name of the security group
+    description: "This sg is just a test sg"  # Description of the security group
+    rules:  # List of rules for the security group
+      - proto: tcp  # Protocol for the rule
+        from_port: 22  # Starting port for the rule
+        to_port: 22  # Ending port for the rule
+        cidr_ip: 0.0.0.0/0  # CIDR IP range for the rule
 
 # Use inside the tasks
-vpc_name: "{{ VPC_NAME }}"
-vpc_region: "{{ VPC_REGION }}"
-Environment: "{{ ENVIRONMENT }}"
-ec2_security_groups: "{{ EC2_SECURITY_GROUPS }}"
+vpc_name: "{{ VPC_NAME }}"  # Variable for VPC name
+vpc_region: "{{ VPC_REGION }}"  # Variable for VPC region
+Environment: "{{ ENVIRONMENT }}"  # Variable for environment name
+ec2_security_groups: "{{ EC2_SECURITY_GROUPS }}"  # Variable for EC2 security groups

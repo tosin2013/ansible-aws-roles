@@ -50,3 +50,13 @@
       tags: [create-ec2key]
 
   when: local_user_ssh_key and not github_username
+
+- block:
+      - name: Create an EC2 key with aap_user_ssh_key
+        ec2_key:
+          region: "{{ vpc_region }}"
+          name: "{{ ec2_key_name }}"
+          key_material: "{{ aap_user_ssh_key }}"
+        tags: [create-ec2key]
+
+  when: aap_user_ssh_key is defined and not local_user_ssh_key and not github_username

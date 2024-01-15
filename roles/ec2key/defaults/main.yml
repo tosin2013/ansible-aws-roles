@@ -24,3 +24,6 @@ vpc_region: "{{ VPC_REGION }}"
 github_username: "{{ GITHUB_USERNAME }}"
 local_user_ssh_key: "{{ LOCAL_USER_SSH_KEY }}"
 ec2_key_name: "{{ EC2_KEY_NAME }}"
+
+# Key used when deploying from Ansible Automation platform 
+aap_user_ssh_key: "{{ aap_user_ssh_key }}"
