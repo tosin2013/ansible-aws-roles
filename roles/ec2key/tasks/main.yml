@@ -14,7 +14,7 @@
         key_material:  "{{ github_key_result.content }}"
       tags: [create-ec2key]
 
-  when: github_username and github_username |lower != 'no' and not local_user_ssh_key
+  when: github_username and github_username |lower != 'no' and not local_user_ssh_key  and not aap_user_ssh_key is defined
 
 - block:
     - name: Find the current login user
@@ -49,7 +49,7 @@
         key_material:  "{{ lookup('file',  ssh_key_location ) }}"
       tags: [create-ec2key]
 
-  when: local_user_ssh_key and not github_username
+  when: local_user_ssh_key and not github_username and not aap_user_ssh_key is defined
 
 - block:
       - name: Create an EC2 key with aap_user_ssh_key
