@@ -7,7 +7,7 @@
       register: github_key_result
       tags: [create-ec2key]
 
-    - name: Creates an new ec2 key with mentioned name if not present
+    - name: Creates a new EC2 key with the mentioned name if not present
       ec2_key:
         region: "{{ vpc_region }}"
         name: "{{ ec2_key_name }}"
@@ -15,10 +15,10 @@
       tags: [create-ec2key]
 
   when: 
-    - github_username is defined
-    - github_username | lower != 'no'
-    - not local_user_ssh_key
-    - not aap_user_ssh_key is defined
+    - use_github_username  # Use 'use_github_username' flag
+    - github_username | lower != 'changeme'  # Modify 'CHANGEME' to the actual default value
+    - not use_local_ssh_key  # Use 'use_local_ssh_key' flag
+    - not use_aap_user_ssh_key  # Use 'use_aap_user_ssh_key' flag
 
 - block:
     - name: Find the current login user
@@ -38,7 +38,7 @@
       register: sshkey_result
       tags: [create-ec2key]
 
-    - name: "Generating a new SSH key for {{ login_user.stdout }} user it does not exists already"
+    - name: "Generating a new SSH key for {{ login_user.stdout }} user if it does not exist already"
       user:
         name: "{{ login_user.stdout }}"
         generate_ssh_key: yes 
@@ -46,7 +46,7 @@
       when: sshkey_result.stat.exists == False
       tags: [create-ec2key]
 
-    - name: Creates an new ec2 key with mentioned name if not present
+    - name: Creates a new EC2 key with the mentioned name if not present
       ec2_key:
         region: "{{ vpc_region }}"
         name: "{{ ec2_key_name }}"
@@ -54,19 +54,19 @@
       tags: [create-ec2key]
       
   when:
-    - local_user_ssh_key
-    - not github_username
-    - not aap_user_ssh_key is defined
+    - use_local_ssh_key  # Use 'use_local_ssh_key' flag
+    - not use_github_username  # Use 'use_github_username' flag
+    - not use_aap_user_ssh_key  # Use 'use_aap_user_ssh_key' flag
 
 - block:
-      - name: Create an EC2 key with aap_user_ssh_key
-        ec2_key:
-          region: "{{ vpc_region }}"
-          name: "{{ ec2_key_name }}"
-          key_material: "{{ aap_user_ssh_key }}"
-        tags: [create-ec2key]
+    - name: Create an EC2 key with aap_user_ssh_key
+      ec2_key:
+        region: "{{ vpc_region }}"
+        name: "{{ ec2_key_name }}"
+        key_material: "{{ aap_user_ssh_key }}"
+      tags: [create-ec2key]
 
   when:
-    - aap_user_ssh_key is defined
-    - not local_user_ssh_key
-    - not github_username
+    - use_aap_user_ssh_key  # Use 'use_aap_user_ssh_key' flag
+    - not use_local_ssh_key  # Use 'use_local_ssh_key' flag
+    - not use_github_username  # Use 'use_github_username' flag
