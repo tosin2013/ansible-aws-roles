@@ -108,6 +108,10 @@
     instance_type: "{{ ec2_instance_type }}"
     image_id: "{{ ami_id }}"
     vpc_subnet_id: "{{ item.1 }}"
+    tags:
+      Name: "{{ vpc_name }}-{{ SERVER_ROLE }}-0{{ item.0 + 1 }}"
+      Environment: "{{ ENVIRONMENT }}"
+      Server_Role: "{{ SERVER_ROLE }}"
     network:
       assign_public_ip: yes
     wait: True
@@ -134,6 +138,10 @@
     instance_type: "{{ ec2_instance_type }}"
     image_id: "{{ ami_id }}"
     vpc_subnet_id: "{{ item.1 }}"
+    tags:
+      Name: "{{ vpc_name }}-{{ SERVER_ROLE }}-0{{ item.0 + 1 }}"
+      Environment: "{{ ENVIRONMENT }}"
+      Server_Role: "{{ SERVER_ROLE }}"
     network:
       assign_public_ip: no
     wait: True
