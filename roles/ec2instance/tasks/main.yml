@@ -65,12 +65,14 @@
 - name: Show length of existing_ec2_instances.results.instances
   debug:
     msg: "The length of existing_ec2_instances.results[0].instances is {{ existing_ec2_instances.results[0].instances | length }}"
+  ignore_errors: true
   tags:
     - create-ec2instance
 
 - name: Set existing_ec2_instances_list fact as a list
   set_fact:
     existing_ec2_instances_list: "{{ existing_ec2_instances_list | default([]) + [item.instances] }}"
+  ignore_errors: true
   loop: "{{ existing_ec2_instances.results }}"
   tags:
     - create-ec2instance
@@ -78,6 +80,7 @@
 - name: Debug existing_ec2_instances_list
   debug:
     var: existing_ec2_instances_list
+  ignore_errors: true
   tags:
     - create-ec2instance
 
@@ -85,6 +88,7 @@
   debug:
     msg: "existing_ec2_instances_list is not empty"
   when: existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool
+  ignore_errors: true
   tags:
     - create-ec2instance
 
@@ -92,6 +96,7 @@
   debug:
     msg: "existing_ec2_instances_list is not empty"
   when: not existing_ec2_instances_list | default([]) | map('length') | list | sum > 0 and deploy_public_ec2_instance | bool
+  ignore_errors: true
   tags:
     - create-ec2instance
 
